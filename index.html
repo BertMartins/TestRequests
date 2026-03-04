@@ -1,51 +1,175 @@
 <!DOCTYPE html>
-<html lang="pt-br">
-
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Requisições</title>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Payload Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <div class="container">
-        <h1>Gerar Requisições</h1>
-        <div class="grupo-de-entrada">
-            <div class="celular">
-                <label for="numLinhas">Quantas linhas tem o seu JSON?</label>
-                <input class="quadrado" type="number" id="numLinhas" min="1" max="100" step="1" required>
-            </div>
-        </div>
-        <div class="tabela">
-            <table>
-                <tr>
-                    <th>
-                        <div id="entradasDeFormato">
-                            <div class="coluna-de-cabecalho">Formato</div>
-                        </div>
-                    </th>
-                    <th>
-                        <div id="entradasDeCampo">
-                            <div class="coluna-de-cabecalho">Campo</div>
-                        </div>
-                    </th>
-                </tr>
-            </table>
-        </div>
-        <div class="celular">
-            <label for="numJson">Quantas requisições deseja gerar?</label>
-            <input class="quadrado" type="number" id="numJson" min="1" step="1" required>
-        </div>
-        <div class="gerar">
-            <button id="botaoGerar">GERAR REQUISIÇÕES</button>
+<div class="app">
+  <div class="header">
+    <div class="header-badge"><i class="fas fa-flask"></i> Ferramenta QA</div>
+    <h1><i class="fas fa-rocket"></i> API Payload Generator</h1>
+    <p>Geração automática de payloads JSON para testes de API &mdash; rápido, flexível e massivo.</p>
+  </div>
 
-            <a class="download" id="linkDownload" style="display: none" download="Requisicoes.txt">Download feito com
-                sucesso!</a>
+  <div class="tabs" id="tabsBar">
+    <button class="tab-btn active" data-tab="generator"><i class="fas fa-cogs"></i> <span class="tab-text">Gerador</span></button>
+    <button class="tab-btn" data-tab="preview"><i class="fas fa-eye"></i> <span class="tab-text">Preview</span></button>
+    <button class="tab-btn" data-tab="import"><i class="fas fa-file-import"></i> <span class="tab-text">Importar</span></button>
+    <button class="tab-btn" data-tab="templates"><i class="fas fa-bookmark"></i> <span class="tab-text">Templates</span></button>
+    <button class="tab-btn" data-tab="loadtest"><i class="fas fa-bolt"></i> <span class="tab-text">Teste de Carga</span></button>
+    <button class="tab-btn" data-tab="report"><i class="fas fa-chart-bar"></i> <span class="tab-text">Relatório</span></button>
+  </div>
+
+  <div class="tab-panel active" id="panel-generator">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-sliders-h"></i> Configuração</div>
+      <div class="inline-row mb-12">
+        <div class="form-group">
+          <label for="numFields">Nº de Campos</label>
+          <input type="number" id="numFields" min="1" max="50" value="3" placeholder="Ex: 5">
         </div>
+        <div class="form-group">
+          <label for="numRequests">Nº de Requisições</label>
+          <input type="number" id="numRequests" min="1" max="10000" value="10" placeholder="Ex: 100">
+        </div>
+        <div class="form-group" style="display:flex;align-items:end">
+          <button class="btn btn-primary" onclick="generateFields()"><i class="fas fa-plus-circle"></i> Gerar Campos</button>
+        </div>
+      </div>
     </div>
 
-    <script src="script.js"></script>
-</body>
+    <div class="card" id="fieldsCard" style="display:none">
+      <div class="card-title"><i class="fas fa-list-alt"></i> Campos do Payload</div>
+      <div id="fieldsContainer"></div>
+      <button class="btn btn-secondary btn-sm mt-12" onclick="addSingleField()"><i class="fas fa-plus"></i> Adicionar Campo</button>
+    </div>
 
+    <div class="card" id="actionsCard" style="display:none">
+      <div class="card-title"><i class="fas fa-play-circle"></i> Ações</div>
+      <div class="inline-row mb-12">
+        <div class="form-group">
+          <label>Formato de Exportação</label>
+          <select id="exportFormat">
+            <option value="json">JSON (Array)</option>
+            <option value="ndjson">NDJSON</option>
+            <option value="csv">CSV</option>
+            <option value="sql">SQL INSERT</option>
+            <option value="postman">Postman Collection</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nome da Tabela (SQL)</label>
+          <input type="text" id="sqlTableName" value="api_test_data" placeholder="Nome da tabela">
+        </div>
+      </div>
+      <div class="flex gap-8 flex-wrap">
+        <button class="btn btn-primary" onclick="generatePayloads()"><i class="fas fa-cog fa-spin-on-active"></i> Gerar Payloads</button>
+        <button class="btn btn-secondary" onclick="previewPayloads()"><i class="fas fa-eye"></i> Preview</button>
+        <button class="btn btn-secondary" onclick="saveAsTemplate()"><i class="fas fa-bookmark"></i> Salvar Template</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-preview">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-code"></i> Pré-visualização do Payload</div>
+      <div id="previewContent" class="json-preview">
+        <div class="empty-state"><i class="fas fa-search"></i><p>Configure os campos e clique em "Preview" para visualizar.</p></div>
+      </div>
+      <div class="mt-12 flex gap-8 flex-wrap">
+        <button class="btn btn-secondary btn-sm" onclick="copyPreview()"><i class="fas fa-copy"></i> Copiar</button>
+        <span class="text-xs text-muted mt-12" id="previewInfo"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-import">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-file-import"></i> Importar Template JSON</div>
+      <p class="text-sm text-muted mb-12">Cole um JSON modelo abaixo e o sistema interpretará os tipos automaticamente.</p>
+      <textarea id="importJson" placeholder='{"nome": "João", "cpf": "12345678909", "email": "test@mail.com", "idade": 25, "ativo": true}'></textarea>
+      <button class="btn btn-primary mt-12" onclick="importTemplate()"><i class="fas fa-magic"></i> Interpretar e Importar</button>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-templates">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-bookmark"></i> Templates Salvos</div>
+      <p class="text-xs text-muted mb-12">Templates ficam armazenados na sessão atual. Ao recarregar a página, serão perdidos.</p>
+      <div id="templatesList">
+        <div class="empty-state"><i class="fas fa-folder-open"></i><p>Nenhum template salvo ainda.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-loadtest">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-bolt"></i> Teste de Carga em API</div>
+      <p class="text-xs text-muted mb-12">Envie os payloads gerados diretamente para um endpoint. A API destino deve suportar CORS.</p>
+      <div class="inline-row mb-12">
+        <div class="form-group" style="flex:2">
+          <label for="apiUrl">URL da API</label>
+          <input type="url" id="apiUrl" placeholder="https://api.exemplo.com/endpoint">
+        </div>
+        <div class="form-group">
+          <label for="httpMethod">Método HTTP</label>
+          <select id="httpMethod">
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+          </select>
+        </div>
+      </div>
+      <div class="inline-row mb-12">
+        <div class="form-group">
+          <label for="ltRequests">Requisições</label>
+          <input type="number" id="ltRequests" min="1" max="1000" value="10">
+        </div>
+        <div class="form-group">
+          <label for="ltConcurrency">Concorrência</label>
+          <input type="number" id="ltConcurrency" min="1" max="50" value="5">
+        </div>
+      </div>
+      <div class="card" style="background:var(--bg2);padding:12px;margin-bottom:12px">
+        <label style="margin-bottom:8px;display:block">Headers Customizados (JSON)</label>
+        <textarea id="customHeaders" style="min-height:60px" placeholder='{"Authorization": "Bearer token123", "X-Custom": "value"}'></textarea>
+      </div>
+      <button class="btn btn-primary" id="btnLoadTest" onclick="startLoadTest()"><i class="fas fa-play"></i> Iniciar Teste</button>
+      <button class="btn btn-danger hidden" id="btnStopTest" onclick="stopLoadTest()"><i class="fas fa-stop"></i> Parar</button>
+      <div class="progress-bar mt-12 hidden" id="ltProgress"><div class="fill" id="ltProgressFill"></div></div>
+      <p class="text-xs text-muted mt-12" id="ltStatus"></p>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-report">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-chart-bar"></i> Relatório de Execução</div>
+      <div id="reportContent">
+        <div class="empty-state"><i class="fas fa-clipboard-list"></i><p>Execute um teste de carga para ver o relatório.</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="help-fab" id="helpFab" onclick="toggleHelp()" title="Central de Ajuda">?</button>
+
+<div class="help-panel" id="helpPanel">
+  <div class="help-header">
+    <i class="fas fa-life-ring"></i>
+    <h3>Central de Ajuda</h3>
+    <button class="help-close" onclick="toggleHelp()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="help-nav" id="helpNav"></div>
+  <div class="help-body" id="helpBody"></div>
+</div>
+=
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="script.js"></script>
+</body>
 </html>
